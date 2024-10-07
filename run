@@ -18,7 +18,7 @@ echo '{"command": "start-judgement"}'
 echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
-  hadolint --format json "$file" | jq '.[] | .command = "annotate" | .text = .message | .severity = .level | del(.code, .file, .level, .message)'
+  hadolint --format json "$file" | jq '.[] | .command = "annotate-code" | .text = .message | .severity = .level | del(.code, .file, .level, .message)'
 else
   echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$empty\"}}"
 fi
