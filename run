@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -u
 
 config=$(cat -)
 file=$(echo "$config" | jq -r '."source"')
@@ -9,9 +9,11 @@ language=$(echo "$config" | jq -r '."natural_language"')
 if [ "$language" = "nl" ]; then
   title="Gerenderd"
   empty="Lege oplossing"
+  build_fail="Docker build is gefaald"
 else
   title="Rendered"
   empty="Empty submission"
+  build_fail="Docker build failed"
 fi
 
 echo '{"command": "start-judgement"}'
@@ -19,6 +21,10 @@ echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
   hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = .level | del(.code, .file, .line, .level, .message)'
+  err=$(docker build -q "$(dirname "$file")" 2>&1 > /dev/null)
+  if [ $? -eq 1 ]; then
+    echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$(echo "$err" | grep -E "ERROR: (.+)")\"}}"
+  fi
 else
   echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$empty\"}}"
 fi
