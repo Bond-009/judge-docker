@@ -21,9 +21,11 @@ echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
   hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = .level | del(.code, .file, .line, .level, .message)'
-  err=$(podman build -q -f "$file" 2>&1 > /dev/null)
-  if [ $? -eq 1 ]; then
-    echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$(echo "$err" | grep -E "ERROR: (.+)")\"}}"
+  err=$(buildah build -q -f "$file" 2>&1 > /dev/null)
+  if [ $? -ne 0 ]; then
+    jq --null-input \
+      --arg description "$err" \
+    '{"command": "escalate-status", "status": {"enum": "wrong", "human": $description}}'
   fi
 else
   echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$empty\"}}"
