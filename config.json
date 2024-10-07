@@ -1,0 +1,4 @@
+{
+    "judge": "docker",
+    "image": "dodona-docker"
+}

@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -eu
+
+config=$(cat -)
+file=$(echo "$config" | jq -r '."source"')
+language=$(echo "$config" | jq -r '."natural_language"')
+
+if [ "$language" = "nl" ]; then
+  title="Gerenderd"
+  empty="Lege oplossing"
+else
+  title="Rendered"
+  empty="Empty submission"
+fi
+
+echo '{"command": "start-judgement"}'
+echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
+
+if [ -s "$file" ]; then
+  hadolint --format json "$file" | jq '.[] | .command = "annotate" | .text = .message | .severity = .level | del(.code, .file, .level, .message)'
+else
+  echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$empty\"}}"
+fi
+
+echo '{"command": "close-tab"}'
+echo '{"command": "close-judgement"}'
