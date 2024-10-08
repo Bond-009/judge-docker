@@ -22,9 +22,7 @@ echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 if [ -s "$file" ]; then
   hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = .level | del(.code, .file, .line, .level, .message)'
 
-  # Buildah version 1.23.0 renamed the 'bud' command to 'build'
-  # use 'bud' to support older versions, newer versions still have this as an alias
-  err=$(buildah bud -q -f "$file" 2>&1 > /dev/null)
+  err=$(/kaniko/executor -v error --no-push -f "$file" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
     jq --null-input \
       --arg description "$err" \
