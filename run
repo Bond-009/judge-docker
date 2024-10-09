@@ -22,7 +22,7 @@ echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 if [ -s "$file" ]; then
   hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = .level | del(.code, .file, .line, .level, .message)'
 
-  err=$(/kaniko/executor -v error --no-push -f "$file" 2>&1 > /dev/null)
+  err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
     jq --null-input \
       --arg description "$err" \
