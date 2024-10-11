@@ -20,7 +20,7 @@ echo '{"command": "start-judgement"}'
 echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
-  hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = .level | del(.code, .file, .line, .level, .message)'
+  hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)'
 
   err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null)
   if [ $? -ne 0 ]; then
