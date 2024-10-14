@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -u
+set -uo pipefail
 
 config=$(cat -)
 file=$(echo "$config" | jq -r '."source"')
@@ -9,10 +9,12 @@ language=$(echo "$config" | jq -r '."natural_language"')
 if [ "$language" = "nl" ]; then
   title="Gerenderd"
   empty="Lege oplossing"
+  linter_fail="Linter is gestopt met errors"
   build_fail="Docker build is gefaald"
 else
   title="Rendered"
   empty="Empty submission"
+  linter_fail="Linter exited with errors"
   build_fail="Docker build failed"
 fi
 
@@ -20,10 +22,11 @@ echo '{"command": "start-judgement"}'
 echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
-  hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)'
+  if ! hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)'; then
+    echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$linter_fail\"}}"
+  fi
 
-  err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null)
-  if [ $? -ne 0 ]; then
+  if ! err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null); then
     jq --null-input \
       --arg description "$err" \
     '{"command": "append-message", "message": {"format": "callout-danger", "description": $description}}'
