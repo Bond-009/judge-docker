@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -uo pipefail
+set -u
 
 config=$(cat -)
 file=$(echo "$config" | jq -r '."source"')
@@ -22,9 +22,14 @@ echo '{"command": "start-judgement"}'
 echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
-  if ! hadolint --format json "$file" | jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)'; then
+  fail="$(mktemp)"
+  if { hadolint --format json "$file" || echo > "$fail"; } |
+     jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)' \
+    && [ -s "$fail" ]
+  then
     echo "{\"command\": \"escalate-status\", \"status\": {\"enum\": \"wrong\", \"human\": \"$linter_fail\"}}"
   fi
+  rm "$fail"
 
   if ! err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null); then
     jq --null-input \
