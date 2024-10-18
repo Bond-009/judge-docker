@@ -35,7 +35,7 @@ echo "{\"command\": \"start-tab\", \"title\": \"$title\"}"
 
 if [ -s "$file" ]; then
   fail="$(mktemp)"
-  if { hadolint $hadolint_args --format json "$file" || echo > "$fail"; } |
+  if { HADOLINT_NOFAIL=1 hadolint $hadolint_args --format json "$file" || echo > "$fail"; } |
      jq '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)' \
     && [ -s "$fail" ]
   then
