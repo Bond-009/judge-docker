@@ -5,6 +5,7 @@ set -u
 config=$(cat -)
 file=$(echo "$config" | jq -r '."source"')
 resources=$(echo "$config" | jq -r '."resources"')
+workdir=$(echo "$config" | jq -r '."workdir"')
 language=$(echo "$config" | jq -r '."natural_language"')
 
 hadolint_args=""
@@ -43,7 +44,7 @@ if [ -s "$file" ]; then
   fi
   rm "$fail"
 
-  if ! err=$(/kaniko/executor -v error --no-push --no-push-cache -f "$file" 2>&1 > /dev/null); then
+  if ! err=$(/kaniko/executor -v error --no-push --no-push-cache --context "$workdir" -f "$file" 2>&1 > /dev/null); then
     jq --null-input \
       --arg description "$err" \
     '{"command": "append-message", "message": {"format": "callout-danger", "description": $description}}'
