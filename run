@@ -46,12 +46,20 @@ if [ -s "$file" ]; then
   fi
   rm "$fail"
 
+  # /kaniko is a safe space
+  cp /bin/busybox /kaniko
+  mv /bin/jq /kaniko
+
   if ! err=$(/kaniko/executor -v error --no-push --no-push-cache --context "$workdir" -f "$file" 2>&1 > /dev/null); then
-    jq --null-input --compact-output \
+    /kaniko/jq --null-input --compact-output \
       --arg description "$err" \
     '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
-    echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$build_fail\" } }"
+    /kaniko/busybox echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$build_fail\" } }"
   fi
+
+  # After running kaniko we can't trust anything outside of /kaniko to be the same
+  PATH="/kaniko"
+  busybox ln -s /kaniko/busybox /kaniko/echo
 
   filename="$resources/files.json"
   if [ -f "$filename" ]; then
