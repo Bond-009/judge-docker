@@ -46,12 +46,22 @@ if [ -s "$file" ]; then
   fi
   rm "$fail"
 
+  cp /bin/busybox /kaniko/busybox
+  mv /bin/jq /kaniko/jq
+
   if ! err=$(/kaniko/executor -v error --no-push --no-push-cache --context "$workdir" -f "$file" 2>&1 > /dev/null); then
     jq --null-input --compact-output \
       --arg description "$err" \
     '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
     echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$build_fail\" } }"
   fi
+
+  /kaniko/busybox cp /kaniko/busybox /bin/busybox
+  /bin/busybox ln -s /bin/busybox /usr/bin/mv
+  ln -s /bin/busybox /usr/bin/ln
+  ln -s /bin/busybox /usr/bin/echo
+  ln -s /bin/busybox /usr/bin/read
+  mv /kaniko/jq /bin/jq
 
   filename="$resources/files.json"
   if [ -f "$filename" ]; then
@@ -64,7 +74,6 @@ if [ -s "$file" ]; then
       echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
-        echo '{ "command": "append-message", "message": "Checking if file exists" }'
         if [ -f "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
@@ -72,7 +81,6 @@ if [ -s "$file" ]; then
         fi
       elif [ "$type" = "directory" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
-        echo '{ "command": "append-message", "message": "Checking if directory exists" }'
         if [ -d "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
