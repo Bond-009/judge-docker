@@ -60,6 +60,7 @@ if [ -s "$file" ]; then
     jq --compact-output '.[]' "$filename" | while read -r fileinfo; do
       type=$(echo "$fileinfo" | jq -r '."type"')
       path=$(echo "$fileinfo" | jq -r '."path"')
+      echo '{ "command": "start-context" }'
       echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
@@ -77,6 +78,7 @@ if [ -s "$file" ]; then
         fi
       fi
       echo '{ "command": "close-testcase" }'
+      echo '{ "command": "close-context" }'
     done
   fi
 else
