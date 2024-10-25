@@ -53,13 +53,15 @@ if [ -s "$file" ]; then
   if ! err=$(/kaniko/executor -v error --no-push --no-push-cache --context "$workdir" -f "$file" 2>&1 > /dev/null); then
     /kaniko/jq --null-input --compact-output \
       --arg description "$err" \
-    '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
+      '{ "command": "append-message", "message": { "format": "callout-danger", "description": $description } }'
     /kaniko/busybox echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$build_fail\" } }"
   fi
 
   # After running kaniko we can't trust anything outside of /kaniko to be the same
   PATH="/kaniko"
-  busybox ln -s /kaniko/busybox /kaniko/echo
+  busybox ln -s /kaniko/busybox /kaniko/ln
+  ln -s /kaniko/busybox /kaniko/cat
+  ln -s /kaniko/busybox /kaniko/echo
 
   filename="$resources/files.json"
   if [ -f "$filename" ]; then
@@ -76,6 +78,22 @@ if [ -s "$file" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
           echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$file_not_found\" } }"
+        fi
+
+        if source="$(echo "$fileinfo" | jq --exit-status -r '."compare"')"; then
+          source="$workdir/$source"
+          source_content=$(cat "$source")
+          jq --null-input --compact-output \
+            --arg content "$source_content" \
+            '{ "command": "start-test", "expected": $content }'
+          path_content=$(cat "$path")
+          result="wrong"
+          if [ "$source_content" = "$path_content" ]; then
+            result="correct"
+          fi
+          jq --null-input --compact-output \
+            --arg content "$path_content" --arg result "$result" \
+            '{ "command": "close-test", "generated": $content, "status": { "enum": $result } }'
         fi
       elif [ "$type" = "directory" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
