@@ -26,12 +26,14 @@ if [ "$language" = "nl" ]; then
   build_fail="Docker build is gefaald"
   file_not_found="Bestand is niet gevonden"
   dir_not_found="Folder is niet gevonden"
+  no_match="Geen overeenkomst met regex."
 else
   empty="Empty submission"
   linter_fail="Linter exited with errors"
   build_fail="Docker build failed"
   file_not_found="File not found"
   dir_not_found="Directory not found"
+  no_match="Didn't match regex."
 fi
 
 echo '{ "command": "start-judgement" }'
@@ -62,6 +64,7 @@ if [ -s "$file" ]; then
   busybox ln -s /kaniko/busybox /kaniko/ln
   ln -s /kaniko/busybox /kaniko/cat
   ln -s /kaniko/busybox /kaniko/echo
+  ln -s /kaniko/busybox /kaniko/grep
 
   filename="$resources/files.json"
   if [ -f "$filename" ]; then
@@ -94,6 +97,12 @@ if [ -s "$file" ]; then
           jq --null-input --compact-output \
             --arg content "$path_content" --arg result "$result" \
             '{ "command": "close-test", "generated": $content, "status": { "enum": $result } }'
+        fi
+
+        if regex="$(echo "$fileinfo" | jq --exit-status -r '."regex"')"; then
+          if ! grep -qE "$regex" "$path"; then
+            echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$path: $no_match\" } }"
+          fi
         fi
       elif [ "$type" = "directory" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
