@@ -100,8 +100,11 @@ if [ -s "$file" ]; then
         fi
 
         if regex="$(echo "$fileinfo" | jq --exit-status -r '."regex"')"; then
+          echo "{ \"command\": \"start-test\", \"expected\": \"$regex\" }"
           if ! grep -qE "$regex" "$path"; then
-            echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$path: $no_match\" } }"
+            echo "{ \"command\": \"close-test\", \"generated\": \"$regex\", \"status\": { \"enum\": \"correct\" } }"
+          else
+            echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$no_match\" } }"
           fi
         fi
       elif [ "$type" = "directory" ]; then
