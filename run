@@ -8,6 +8,8 @@ resources=$(echo "$config" | jq -r '."resources"')
 workdir=$(echo "$config" | jq -r '."workdir"')
 language=$(echo "$config" | jq -r '."natural_language"')
 
+judge_file="$resources/judge.json"
+
 hadolint_args=""
 
 for filename in .hadolint.yml .hadolint.yaml hadolint.yml hadolint.yaml
@@ -40,6 +42,12 @@ echo '{ "command": "start-judgement" }'
 echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
 
 if [ -s "$file" ]; then
+  if [ -f "$judge_file" ]; then
+    if ! containerlint --config "$judge_file" "$file"; then
+      echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$linter_fail\" } }"
+    fi
+  fi
+
   fail="$(mktemp)"
   if { HADOLINT_NOFAIL=1 hadolint $hadolint_args --format json "$file" || echo > "$fail"; } |
      jq --compact-output '.[] | .column -= 1 | .command = "annotate-code" | .row = .line - 1 | .text = .message | .type = if .level == "style" or .level == "ignore" then "info" else .level end | del(.code, .file, .line, .level, .message)' \
@@ -66,11 +74,11 @@ if [ -s "$file" ]; then
   ln -s /kaniko/busybox /kaniko/echo
   ln -s /kaniko/busybox /kaniko/grep
 
-  filename="$resources/files.json"
   if [ -f "$filename" ]; then
+
     echo '{ "command": "close-tab" }'
     echo "{ \"command\": \"start-tab\", \"title\": \"Files\" }"
-    jq --compact-output '.[]' "$filename" | while read -r fileinfo; do
+    jq --compact-output '.files[]' "$judge_file" | while read -r fileinfo; do
       type=$(echo "$fileinfo" | jq -r '."type"')
       path=$(echo "$fileinfo" | jq -r '."path"')
       echo '{ "command": "start-context" }'
