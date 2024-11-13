@@ -40,7 +40,6 @@ fi
 
 echo '{ "command": "start-judgement" }'
 echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
-echo '{ "command": "start-context" }'
 
 if [ -s "$file" ]; then
   if [ -f "$judge_file" ]; then
@@ -77,13 +76,12 @@ if [ -s "$file" ]; then
 
   if [ -f "$filename" ]; then
 
-    echo '{ "command": "close-context" }'
     echo '{ "command": "close-tab" }'
     echo "{ \"command\": \"start-tab\", \"title\": \"Files\" }"
-    echo '{ "command": "start-context" }'
     jq --compact-output '.files[]' "$judge_file" | while read -r fileinfo; do
       type=$(echo "$fileinfo" | jq -r '."type"')
       path=$(echo "$fileinfo" | jq -r '."path"')
+      echo '{ "command": "start-context" }'
       echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
@@ -126,12 +124,12 @@ if [ -s "$file" ]; then
         fi
       fi
       echo '{ "command": "close-testcase" }'
+      echo '{ "command": "close-context" }'
     done
   fi
 else
   echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$empty\" } } "
 fi
 
-echo '{ "command": "close-context" }'
 echo '{ "command": "close-tab" }'
 echo '{ "command": "close-judgement" }'
