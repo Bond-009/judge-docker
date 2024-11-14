@@ -43,7 +43,7 @@ echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
 
 if [ -s "$file" ]; then
   if [ -f "$judge_file" ]; then
-    if ! containerlint --config "$judge_file" "$file"; then
+    if ! dodona-containerfile-evaluator --config "$judge_file" "$file"; then
       echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$linter_fail\" } }"
     fi
   fi
