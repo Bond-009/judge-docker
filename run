@@ -28,14 +28,22 @@ if [ "$language" = "nl" ]; then
   build_fail="Docker build is gefaald"
   file_not_found="Bestand is niet gevonden"
   dir_not_found="Folder is niet gevonden"
-  no_match="Geen overeenkomst met regex."
+  no_match="Geen overeenkomst met regex"
+  file_check="Bestaan van bestand controleren"
+  file_content="Inhoud van bestand controleren"
+  file_regex="Inhoud van bestand controleren met behulp van reguliere expressie"
+  directory_check="Bestaan van folder controleren"
 else
   empty="Empty submission"
   linter_fail="Linter exited with errors"
   build_fail="Docker build failed"
   file_not_found="File not found"
   dir_not_found="Directory not found"
-  no_match="Didn't match regex."
+  no_match="Didn't match regex"
+  file_check="Checking file existence"
+  file_content="Checking file content"
+  file_regex="Matching file content using regular expression"
+  directory_check="Checking directory existence"
 fi
 
 echo '{ "command": "start-judgement" }'
@@ -83,7 +91,7 @@ if [ -s "$file" ]; then
       path=$(echo "$fileinfo" | jq -r '."path"')
       echo "{ \"command\": \"start-context\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
-        echo '{ "command": "start-testcase", "description": "Checking file existence" }'
+        echo "{ \"command\": \"start-testcase\", \"description\": \"$file_check\" }"
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -f "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
@@ -93,7 +101,7 @@ if [ -s "$file" ]; then
         echo '{ "command": "close-testcase" }'
 
         if source="$(echo "$fileinfo" | jq --exit-status -r '."compare"')"; then
-          echo '{ "command": "start-testcase", "description": "Checking file content" }'
+          echo "{ \"command\": \"start-testcase\", \"description\": \"$file_content\" }"
           source="$workdir/$source"
           source_content=$(cat "$source")
           jq --null-input --compact-output \
@@ -111,7 +119,7 @@ if [ -s "$file" ]; then
         fi
 
         if regex="$(echo "$fileinfo" | jq --exit-status -r '."regex"')"; then
-          echo '{ "command": "start-testcase", "description": "Matching file content using regular expression" }'
+          echo "{ \"command\": \"start-testcase\", \"description\": \"$file_regex\" }"
           echo "{ \"command\": \"start-test\", \"expected\": \"$regex\" }"
           if ! grep -qE "$regex" "$path"; then
             echo "{ \"command\": \"close-test\", \"generated\": \"$regex\", \"status\": { \"enum\": \"correct\" } }"
@@ -121,7 +129,7 @@ if [ -s "$file" ]; then
           echo '{ "command": "close-testcase" }'
         fi
       elif [ "$type" = "directory" ]; then
-        echo '{ "command": "start-testcase", "description": "Checking directory existence" }'
+        echo "{ \"command\": \"start-testcase\", \"description\": \"$directory_check\" }"
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -d "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
