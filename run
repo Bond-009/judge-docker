@@ -81,17 +81,19 @@ if [ -s "$file" ]; then
     jq --compact-output '.files[]' "$judge_file" | while read -r fileinfo; do
       type=$(echo "$fileinfo" | jq -r '."type"')
       path=$(echo "$fileinfo" | jq -r '."path"')
-      echo '{ "command": "start-context" }'
-      echo "{ \"command\": \"start-testcase\", \"description\": \"$path\" }"
+      echo "{ \"command\": \"start-context\", \"description\": \"$path\" }"
       if [ "$type" = "file" ]; then
+        echo '{ "command": "start-testcase", "description": "Checking file existence" }'
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -f "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
           echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$file_not_found\" } }"
         fi
+        echo '{ "command": "close-testcase" }'
 
         if source="$(echo "$fileinfo" | jq --exit-status -r '."compare"')"; then
+          echo '{ "command": "start-testcase", "description": "Checking file content" }'
           source="$workdir/$source"
           source_content=$(cat "$source")
           jq --null-input --compact-output \
@@ -105,25 +107,29 @@ if [ -s "$file" ]; then
           jq --null-input --compact-output \
             --arg content "$path_content" --arg result "$result" \
             '{ "command": "close-test", "generated": $content, "status": { "enum": $result } }'
+          echo '{ "command": "close-testcase" }'
         fi
 
         if regex="$(echo "$fileinfo" | jq --exit-status -r '."regex"')"; then
+          echo '{ "command": "start-testcase", "description": "Matching file content using regular expression" }'
           echo "{ \"command\": \"start-test\", \"expected\": \"$regex\" }"
           if ! grep -qE "$regex" "$path"; then
             echo "{ \"command\": \"close-test\", \"generated\": \"$regex\", \"status\": { \"enum\": \"correct\" } }"
           else
             echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$no_match\" } }"
           fi
+          echo '{ "command": "close-testcase" }'
         fi
       elif [ "$type" = "directory" ]; then
+        echo '{ "command": "start-testcase", "description": "Checking directory existence" }'
         echo "{ \"command\": \"start-test\", \"expected\": \"$path\" }"
         if [ -d "$path" ]; then
           echo "{ \"command\": \"close-test\", \"generated\": \"$path\", \"status\": { \"enum\": \"correct\" } }"
         else
           echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$dir_not_found\" } }"
         fi
+        echo '{ "command": "close-testcase" }'
       fi
-      echo '{ "command": "close-testcase" }'
       echo '{ "command": "close-context" }'
     done
   fi
