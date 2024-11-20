@@ -120,9 +120,13 @@ if [ -s "$file" ]; then
 
         if regex="$(echo "$fileinfo" | jq --exit-status -r '."regex"')"; then
           echo "{ \"command\": \"start-testcase\", \"description\": \"$file_regex\" }"
-          echo "{ \"command\": \"start-test\", \"expected\": \"$regex\" }"
+          jq --null-input --compact-output \
+            --arg content "$regex" \
+            '{ "command": "start-test", "expected": $content }'
           if ! grep -qE "$regex" "$path"; then
-            echo "{ \"command\": \"close-test\", \"generated\": \"$regex\", \"status\": { \"enum\": \"correct\" } }"
+            jq --null-input --compact-output \
+              --arg content "$regex" \
+              '{ "command": "close-test", "generated": $content, "status": { "enum": "correct" } }'
           else
             echo "{ \"command\": \"close-test\", \"generated\": \"\", \"status\": { \"enum\": \"wrong\", \"human\": \"$no_match\" } }"
           fi
