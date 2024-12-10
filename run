@@ -24,6 +24,7 @@ done
 title="Docker"
 if [ "$language" = "nl" ]; then
   empty="Lege oplossing"
+  evaluator_fail="Evaluator is gestopt met errors"
   linter_fail="Linter is gestopt met errors"
   build_fail="Docker build is gefaald"
   file_not_found="Bestand is niet gevonden"
@@ -35,6 +36,7 @@ if [ "$language" = "nl" ]; then
   directory_check="Bestaan van folder controleren"
 else
   empty="Empty submission"
+  evaluator_fail="Evaluator exited with errors"
   linter_fail="Linter exited with errors"
   build_fail="Docker build failed"
   file_not_found="File not found"
@@ -52,7 +54,7 @@ echo "{ \"command\": \"start-tab\", \"title\": \"$title\" }"
 if [ -s "$file" ]; then
   if [ -f "$judge_file" ]; then
     if ! dodona-containerfile-evaluator --config "$judge_file" "$file"; then
-      echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$linter_fail\" } }"
+      echo "{ \"command\": \"escalate-status\", \"status\": { \"enum\": \"wrong\", \"human\": \"$evaluator_fail\" } }"
     fi
   fi
 
