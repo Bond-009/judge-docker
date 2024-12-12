@@ -125,7 +125,7 @@ if [ -s "$file" ]; then
           jq --null-input --compact-output \
             --arg content "$regex" \
             '{ "command": "start-test", "expected": $content }'
-          if ! grep -qE "$regex" "$path"; then
+          if grep -qE "$regex" "$path"; then
             jq --null-input --compact-output \
               --arg content "$regex" \
               '{ "command": "close-test", "generated": $content, "status": { "enum": "correct" } }'
